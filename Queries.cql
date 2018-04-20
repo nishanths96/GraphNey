@@ -30,21 +30,26 @@ match (:Page_category{page_type:'checkoutpage'})<-[:visits]-(u:User)-[:searched]
 
 
 // Query to calculate Jaccard similarity - 
-
 match (u1:User)-[:interested_in]->(p1:Product_name {name:'ideapad-100-series'})<-[:interested_in]-(u2:User)
 where u1<>u2 
 with u1, u2, count(distinct p1.name) as intersection_count
-
 match (u:User)-[:interested_in]->(p:Product_name)
 where u in [u1, u2]
 with u1, u2, intersection_count, count(distinct p.name) as union_count
-
 with u1, u2, intersection_count, union_count, (intersection_count*1.0/union_count) as jaccard_index
-
 merge (u1)-[r:similar_to]-(u2)
 on create set r.similarity = jaccard_index
 
-
+// Other weight metric - 
+match (u:User)-[:interested_in]->(p:Product_name) 
+with collect(u) as users
+FOREACH (us1 in users |
+    FOREACH(us2 in users |
+		merge (us1)-[r:similar_to]->(us2)
+        on create set r.weight=100
+        on match set r.weight = r.weight + 100
+     )   
+)
 
 
 
